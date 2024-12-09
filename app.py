@@ -69,7 +69,7 @@ if companies:
     for company in filtered_companies:
         company_name = company.get('name_1', 'Kein Name')
         contact_id = company.get('id', None)  # Use contact ID for fetching files
-        if st.button(f"View Files for {company_name}"):
+        if st.button(f"{company_name}"):
             if contact_id:
                 st.write(f"Fetching files for company: **{company_name}**")
                 files = fetch_files_by_company(contact_id)
