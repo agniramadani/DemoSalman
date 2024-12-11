@@ -1,9 +1,69 @@
 import streamlit as st
+import tempfile
 import requests
 import datetime
+import zipfile
+import os
 
 # Public On Purpose
-ACCESS_TOKEN = "eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICJkVTNTYXFLOHF1c25rakl4WEFsbE1EZk0zakRLYkJneDd3dlVVMHBsaUhFIn0.eyJleHAiOjE3MzM5MjkzMzAsImlhdCI6MTczMzkyNTczMCwianRpIjoiZjM4ODA4ZWMtODJhNC00Y2YxLWEzNWYtMDRhYWUyYWVjNmRkIiwiaXNzIjoiaHR0cHM6Ly9hdXRoLmJleGlvLmNvbS9yZWFsbXMvYmV4aW8iLCJzdWIiOiI3OTg1NmY3ZC1lMzdmLTQ4ZDItYTU4ZC1lZDNlOWU3YjdmN2IiLCJ0eXAiOiJCZWFyZXIiLCJhenAiOiJhMGU1MDc2Ny1jOGM1LTRhYjMtODUwMi04NDY4YTUzN2FhOTIiLCJzaWQiOiJkYjA2NzcyMC02OTQwLTQyYWUtYTA5Yy0wNWJiOGY1MjFmMTIiLCJzY29wZSI6ImZpbGUgY29udGFjdF9zaG93IiwibG9naW5faWQiOiI3OTg1NmY3ZC1lMzdmLTQ4ZDItYTU4ZC1lZDNlOWU3YjdmN2IiLCJjb21wYW55X2lkIjoiNnJ5Z21xYnJocGJuIiwidXNlcl9pZCI6NDM5NTUwLCJjb21wYW55X3VzZXJfaWQiOjR9.cArDWsi-vmCXCXxXACTHkIoOxXxzAFJ8wbvNfZJBET4TGCyNJx-gXBjlMPCHBaIWko0D0nGhuR7e95ROEkCCEQnZyoI43EkIssq_voo9Rwf1zyUzpB1j0vLPOOfzBy23Ym8aM4kEYzot5-I-Dwf8sG-JBwQCBD_stRe37yvHnR9NVFvMYRpKIsZ19E5O3LK_GqW7qwdY_AM3zBwVK-bVDJ4z6Gq3BP8b8NCoVyTKVRIEJggKIFTh4aY9yLeRuYvt_S8sfs5QTUJmcRbhft1gcJjXIeriO4voPHhAXY_7rkOkYbL6EIHXpqxuESLbg83opIjiybp2gs2Z1jVjBL9WQA"
+ACCESS_TOKEN = "eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICJkVTNTYXFLOHF1c25rakl4WEFsbE1EZk0zakRLYkJneDd3dlVVMHBsaUhFIn0.eyJleHAiOjE3MzM5MzAxODMsImlhdCI6MTczMzkyNjU4MywianRpIjoiNDBjMTNkNzctYWFiYy00OTY0LWI1OGQtNzlmOTU5NTBjZTY4IiwiaXNzIjoiaHR0cHM6Ly9hdXRoLmJleGlvLmNvbS9yZWFsbXMvYmV4aW8iLCJzdWIiOiI3OTg1NmY3ZC1lMzdmLTQ4ZDItYTU4ZC1lZDNlOWU3YjdmN2IiLCJ0eXAiOiJCZWFyZXIiLCJhenAiOiJhMGU1MDc2Ny1jOGM1LTRhYjMtODUwMi04NDY4YTUzN2FhOTIiLCJzaWQiOiJkYjA2NzcyMC02OTQwLTQyYWUtYTA5Yy0wNWJiOGY1MjFmMTIiLCJzY29wZSI6ImZpbGUgY29udGFjdF9zaG93IiwibG9naW5faWQiOiI3OTg1NmY3ZC1lMzdmLTQ4ZDItYTU4ZC1lZDNlOWU3YjdmN2IiLCJjb21wYW55X2lkIjoiNnJ5Z21xYnJocGJuIiwidXNlcl9pZCI6NDM5NTUwLCJjb21wYW55X3VzZXJfaWQiOjR9.PPpfJ_1pAbtdnxOwNef-CNo7xwI0Nj3No61UnIearQ8XBYcUs5NsxOQqOg6cZdw8K5Mp-ZBp-ypplfNkyWy5DJR7HsuY4wqRYJBthPHS9B-pG77zJj_XfQa-EkKIQzSvQJbQC35MO-HA-a-kRyc-Jm7ipBy-rAyGq-KWCRsOPD2SbGvVzPIeHeK4bHrPm92aqvRQs-c1c8YOI_GNlJ_RffB-zXqHyIVeR5_UYhVJMVgLCFMdRPpKq1VsLIoSVbLHTfN6Vk1ACbrcd8jyfgvIdFmJN4LvQiU0TV-9dMygJp_N64lXLLx31u5UMrRwmng5_B9jLH55SKyt00xnoTxbmg"
+
+def fetch_and_save_files(temp_dir):
+    """
+    Fetch all archived files and save them to a temporary directory.
+    """
+    files_endpoint = "https://api.bexio.com/3.0/files"
+    headers = {
+        "Authorization": f"Bearer {ACCESS_TOKEN}",
+        "Accept": "application/json"
+    }
+    params = {
+        "archived_state": "archived"  # Options: all, archived, not_archived
+    }
+
+    response = requests.get(files_endpoint, headers=headers, params=params)
+
+    if response.status_code == 200:
+        files = response.json()
+
+        if not files:
+            return None, "No archived files found."
+
+        for file in files:
+            file_id = file.get("id")
+            if not file_id:
+                continue  # Skip files without a valid ID
+            
+            # Fetch the file data
+            file_download_endpoint = f"https://api.bexio.com/3.0/files/{file_id}/download"
+            file_response = requests.get(file_download_endpoint, headers=headers, stream=True)
+
+            if file_response.status_code == 200:
+                # Extract filename from headers or assign a default
+                filename = file_response.headers.get("Content-Disposition", f"file_{file_id}.pdf")
+                if "filename=" in filename:
+                    filename = filename.split("filename=")[-1].strip('"')
+
+                # Save the file to the temporary directory
+                file_path = os.path.join(temp_dir, filename)
+                with open(file_path, "wb") as f:
+                    f.write(file_response.content)
+            else:
+                st.warning(f"Failed to download file with ID {file_id}. Skipping.")
+
+        return temp_dir, None
+    else:
+        return None, response.text
+
+def create_zip_from_directory(temp_dir, zip_file_path):
+    """
+    Create a zip archive from a temporary directory.
+    """
+    with zipfile.ZipFile(zip_file_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+        for root, _, files in os.walk(temp_dir):
+            for file in files:
+                file_path = os.path.join(root, file)
+                zipf.write(file_path, os.path.relpath(file_path, temp_dir))
 
 # Function to fetch companies
 def fetch_companies():
@@ -52,7 +112,29 @@ search_name = st.text_input("Search by Company Name")
 current_year = datetime.datetime.now().year  # Get the current year
 filter_year = st.number_input("Filter by Year (if available)", min_value=1900, max_value=2100, value=current_year)
 
-st.write("Fetching list of companies from Bexio...")
+# Add a "Download All Archives" button
+if st.button("All Archives"):
+    with tempfile.TemporaryDirectory() as temp_dir:
+        temp_dir, error = fetch_and_save_files(temp_dir)
+
+        if temp_dir:
+            zip_file_path = os.path.join(tempfile.gettempdir(), "all_archived_files.zip")
+            create_zip_from_directory(temp_dir, zip_file_path)
+
+            # Provide the zip file for download
+            with open(zip_file_path, "rb") as zipf:
+                st.download_button(
+                    label="Download Archive",
+                    data=zipf,
+                    file_name="all_archived_files.zip",
+                    mime="application/zip"
+                )
+            
+            # Cleanup: Zip file will be automatically removed since it’s in the temp directory
+        elif error:
+            st.error(f"Error fetching files: {error}")
+
+st.write("Company list:")
 
 # Fetch and display companies
 companies = fetch_companies()
