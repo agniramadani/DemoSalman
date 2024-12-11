@@ -113,7 +113,7 @@ current_year = datetime.datetime.now().year  # Get the current year
 filter_year = st.number_input("Filter by Year (if available)", min_value=1900, max_value=2100, value=current_year)
 
 # Add a "Download All Archives" button
-if st.button("All Archives"):
+if st.button("Prepare All Archives (Download)"):
     with tempfile.TemporaryDirectory() as temp_dir:
         temp_dir, error = fetch_and_save_files(temp_dir)
 
